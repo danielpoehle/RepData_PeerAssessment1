@@ -1,9 +1,4 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
@@ -17,7 +12,8 @@ The variables included in this comma-separated-value (CSV) file are
 - **interval**: Identifier for the 5-minute interval in which measurement was taken
 
 At first we load the dataset, convert the **date** column into date format, add the **minute** column and have a look at the number of steps:
-```{r}
+
+```r
 unzip("./repdata-data-activity.zip")
 activityDataFrame <- read.csv("activity.csv", na.strings = "NA", 
                               stringsAsFactors = FALSE)
@@ -26,16 +22,23 @@ activityDataFrame$minute <- rep(seq.int(0,1435,5),61)
 summary(activityDataFrame$steps)
 ```
 
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+##    0.00    0.00    0.00   37.38   12.00  806.00    2304
+```
+
 There are a lot of NA-Values in the **steps** column.
 
 ## What is mean total number of steps taken per day?
 
 Now we have a look at the sum of steps for each day:
-```{r, message=FALSE}
+
+```r
 library(dplyr)
 ```
 
-```{r, fig.height=3.5}
+
+```r
 stepsPerDay <- summarize(group_by(activityDataFrame, date), 
           SumSteps = sum(steps, na.rm=TRUE))
 hist(stepsPerDay$SumSteps, col = 'royalblue', main = "Steps Per Day",
@@ -48,10 +51,24 @@ text(x = 20000, y = 13, labels = paste("Median:", round(median(stepsPerDay$SumSt
      pos = 4, col = 'darkblue')
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png) 
+
 The mean and median total steps per day:
-```{r}
+
+```r
 paste("Mean:", round(mean(stepsPerDay$SumSteps),1))
+```
+
+```
+## [1] "Mean: 9354.2"
+```
+
+```r
 paste("Median:", round(median(stepsPerDay$SumSteps),1))
+```
+
+```
+## [1] "Median: 10395"
 ```
 
 ## What is the average daily activity pattern?
@@ -59,7 +76,8 @@ paste("Median:", round(median(stepsPerDay$SumSteps),1))
 Now, we have a look at the average number of steps over a day. The **interval** 
 column gives the clock time from 0 (00:00:00) to 2355 (23:55:00), so we use the 
 **minute** column instead to avoid a "jump" into the next hour, e.g. from 55 (00:55:00) to 100 (01:00:00).
-```{r}
+
+```r
 stepsPerInterval <- summarize(group_by(activityDataFrame, minute), 
           AverageSteps = mean(steps, na.rm=TRUE))
 plot(stepsPerInterval$minute, stepsPerInterval$AverageSteps, type = "l",
@@ -75,24 +93,37 @@ text(x = 720, y = 10, "12:00", pos = 1, col = 'black')
 text(x = 1080, y = 10, "18:00", pos = 1, col = 'black')
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
+
 The interval with maximum number of steps on average across all the days:
-```{r}
+
+```r
 maxSteps <- stepsPerInterval$AverageSteps[which.max(stepsPerInterval$AverageSteps)]
 activityDataFrame$interval[which.max(stepsPerInterval$AverageSteps)]
 ```
 
-Between 8:35 and 8:40 the maximum number of steps (`r round(maxSteps,2)`) occur.
+```
+## [1] 835
+```
+
+Between 8:35 and 8:40 the maximum number of steps (206.17) occur.
 
 ## Imputing missing values
 
 Number of rows with missing values:
-```{r}
+
+```r
 sum(is.na(activityDataFrame$steps))
+```
+
+```
+## [1] 2304
 ```
 
 Strategy for for filling in all of the missing values in the dataset: use
 the mean for that 5-minute interval:
-```{r}
+
+```r
 meanPerInterval <- summarize(group_by(activityDataFrame, interval), 
           MeanSteps = mean(steps, na.rm=TRUE))
 adjustedSteps <- ifelse(is.na(activityDataFrame$steps), 
@@ -100,14 +131,26 @@ adjustedSteps <- ifelse(is.na(activityDataFrame$steps),
                                                      meanPerInterval$interval)], 
                      activityDataFrame$steps)
 summary(adjustedSteps)
+```
+
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    0.00    0.00    0.00   37.38   27.00  806.00
+```
+
+```r
 adjustedDataFrame <- activityDataFrame[,2:4]
 adjustedDataFrame$steps <- adjustedSteps
 anyNA(adjustedDataFrame)
+```
 
+```
+## [1] FALSE
 ```
 There are no more NA-values in the dataset.  
 The distribution of total number of steps with the adjusted dataset:
-```{r, fig.height=3.5}
+
+```r
 stepsPerDay <- summarize(group_by(adjustedDataFrame, date), 
           SumSteps = sum(steps, na.rm=TRUE))
 hist(stepsPerDay$SumSteps, col = 'royalblue', main = "Steps Per Day (Adjusted Dataset)",
@@ -120,20 +163,29 @@ text(x = 18000, y = 17, labels = paste("Median:", round(median(stepsPerDay$SumSt
      pos = 4, col = 'darkblue')
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
+
 The distribution differs from the estimates from the first part of the assignment.   
 Impact: Having the adjusted number of steps, mean and median are equal. The distribution looks more like a normal distribution and the number of days with zero steps are much lower.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
 At first we generate an additional column **weekday** (TRUE or FALSE) indicating if the current day is weekday (Monday till Friday) or not.
-```{r}
+
+```r
 adjustedDataFrame$weekday <- weekdays(activityDataFrame$date, abbreviate = TRUE) %in%
                              c("Mo", "Di", "Mi", "Do", "Fr")
 summary(adjustedDataFrame$weekday)
 ```
 
+```
+##    Mode   FALSE    TRUE    NA's 
+## logical    4608   12960       0
+```
+
 Now, we have a look at the average number of steps over a day for weekdays and weekend. We use the **interval** column since it was used in the example plot:
-```{r, fig.height=7.5}
+
+```r
 stepsPerIntervalWeekday <- summarize(group_by(adjustedDataFrame[adjustedDataFrame$weekday==TRUE,], interval),  AverageSteps = mean(steps, na.rm=TRUE))
 stepsPerIntervalWeekend <- summarize(group_by(adjustedDataFrame[adjustedDataFrame$weekday==FALSE,], interval), AverageSteps = mean(steps, na.rm=TRUE))
 par(mfrow = c(2,1))
@@ -148,6 +200,8 @@ plot(stepsPerIntervalWeekend$interval, stepsPerIntervalWeekend$AverageSteps,
      ylab = "Average Number of Steps", lwd = 2,
      ylim = c(0, 250))
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-11-1.png) 
 
 Result: On weekends, the steps are more distributed over the day. At weekdays there is a peak in the morning and only little peaks in the afternoon and in the evening.  
 On weekends, steps occur later in the morning than on weekdays (e.g. people sleep longer than on weekdays).
